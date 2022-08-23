@@ -21,7 +21,7 @@ class EntityReferenceFieldFormatterTest extends EntityEmbedTestBase {
   /**
    * {@inheritdoc}
    */
-  protected function setUp() {
+  protected function setUp(): void {
     parent::setUp();
 
     // Add a new menu entity which does not has a view controller.

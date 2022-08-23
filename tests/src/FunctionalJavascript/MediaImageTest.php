@@ -50,12 +50,12 @@ class MediaImageTest extends EntityEmbedTestBase {
   /**
    * {@inheritdoc}
    */
-  public static $modules = ['entity_embed_test'];
+  protected static $modules = ['entity_embed_test'];
 
   /**
    * {@inheritdoc}
    */
-  protected function setUp() {
+  protected function setUp(): void {
     parent::setUp();
 
     // Note that media_install() grants 'view media' to all users by default.

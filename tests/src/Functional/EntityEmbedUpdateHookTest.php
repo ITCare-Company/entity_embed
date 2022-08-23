@@ -29,7 +29,7 @@ class EntityEmbedUpdateHookTest extends UpdatePathTestBase {
   /**
    * {@inheritdoc}
    */
-  protected function setUp() {
+  protected function setUp(): void {
     parent::setUp();
     $button = $this->container
       ->get('entity_type.manager')
