@@ -24,7 +24,7 @@ class EntityEmbedFilterTest extends EntityEmbedFilterTestBase {
   /**
    * {@inheritdoc}
    */
-  protected function setUp() {
+  protected function setUp(): void {
     parent::setUp();
 
     $this->installConfig('system');
@@ -275,7 +275,7 @@ class EntityEmbedFilterTest extends EntityEmbedFilterTestBase {
     $this->assertNotEmpty($deleted_embed_warning);
     $this->assertHasAttributes($deleted_embed_warning[0], [
       'alt' => $expected_missing_text,
-      'src' => file_url_transform_relative(file_create_url('core/modules/media/images/icons/no-thumbnail.png')),
+      'src' => \Drupal::service('file_url_generator')->generateString('core/modules/media/images/icons/no-thumbnail.png'),
       'title' => $expected_missing_text,
     ]);
   }

@@ -415,7 +415,7 @@ class EntityEmbedDialog extends FormBase {
         $entity_label = $entity->toLink($entity->label(), 'canonical', $options)->toString();
       }
       elseif ($entity->getEntityTypeId() == 'file') {
-        $entity_label = '<a href="' . file_create_url($entity->getFileUri()) . '" target="_blank">' . $entity->label() . '</a>';
+        $entity_label = '<a href="' . \Drupal::service('file_url_generator')->generateAbsoluteString($entity->getFileUri()) . '" target="_blank">' . $entity->label() . '</a>';
       }
       else {
         $entity_label = '<a href="' . $entity->toUrl()->toString() . '" target="_blank">' . $entity->label() . '</a>';
