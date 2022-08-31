@@ -54,7 +54,7 @@ class ViewModeFieldFormatterTest extends EntityEmbedTestBase {
       $this->drupalGet('node/' . $node->id());
       $plugin = explode('.', $plugin);
       $view_mode = str_replace('_', '-', end($plugin));
-      $this->assertSession()->responseContains('node--view-mode-' . $view_mode, 'Node rendered in the correct view mode: ' . $view_mode . '.');
+      $this->assertSession()->responseContains('node--view-mode-' . $view_mode);
     }
   }
 
