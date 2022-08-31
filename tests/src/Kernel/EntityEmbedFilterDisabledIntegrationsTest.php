@@ -7,6 +7,7 @@ namespace Drupal\Tests\entity_embed\Kernel;
  *
  * @coversDefaultClass \Drupal\entity_embed\Plugin\Filter\EntityEmbedFilter
  * @group entity_embed
+ * @requires module quickedit
  */
 class EntityEmbedFilterDisabledIntegrationsTest extends EntityEmbedFilterTestBase {
 
