@@ -17,6 +17,11 @@ class ConfigurationUiTest extends EntityEmbedTestBase {
   /**
    * {@inheritdoc}
    */
+  protected $failOnJavascriptConsoleErrors = FALSE;
+
+  /**
+   * {@inheritdoc}
+   */
   protected static $modules = [
     'ckeditor',
     'entity_embed',
