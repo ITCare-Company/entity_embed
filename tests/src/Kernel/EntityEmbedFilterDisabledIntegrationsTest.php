@@ -7,7 +7,6 @@ namespace Drupal\Tests\entity_embed\Kernel;
  *
  * @coversDefaultClass \Drupal\entity_embed\Plugin\Filter\EntityEmbedFilter
  * @group entity_embed
- * @requires module quickedit
  */
 class EntityEmbedFilterDisabledIntegrationsTest extends EntityEmbedFilterTestBase {
 
@@ -16,7 +15,6 @@ class EntityEmbedFilterDisabledIntegrationsTest extends EntityEmbedFilterTestBas
    */
   protected static $modules = [
     'contextual',
-    'quickedit',
   ];
 
   /**
@@ -56,10 +54,7 @@ class EntityEmbedFilterDisabledIntegrationsTest extends EntityEmbedFilterTestBas
     return [
       'contextual' => [
         'div.embedded-entity > .contextual-region',
-      ],
-      'quickedit' => [
-        'div.embedded-entity > [data-quickedit-entity-id]',
-      ],
+      ]
     ];
   }
 
