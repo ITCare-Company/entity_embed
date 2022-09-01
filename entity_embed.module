@@ -280,9 +280,9 @@ function entity_embed_filter_format_edit_form_validate($form, FormStateInterface
 }
 
 /**
- * Implements hook_field_widget_form_alter().
+ * Implements hook_field_widget_single_element_form_alter().
  */
-function entity_embed_field_widget_form_alter(&$element, FormStateInterface $form_state, $context) {
+function entity_embed_field_widget_single_element_form_alter(&$element, FormStateInterface $form_state, $context) {
   // Add a `data-entity_embed-host-entity-langcode` attribute so that
   // entity_embed's JavaScript can pass the host entity's language to
   // EntityEmbedDialog, allowing it to present entities in the same language.
