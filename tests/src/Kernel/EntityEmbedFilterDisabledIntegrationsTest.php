@@ -27,7 +27,6 @@ class EntityEmbedFilterDisabledIntegrationsTest extends EntityEmbedFilterTestBas
     $this->container->get('current_user')
       ->addRole($this->drupalCreateRole([
         'access contextual links',
-        'access in-place editing',
       ]));
   }
 
