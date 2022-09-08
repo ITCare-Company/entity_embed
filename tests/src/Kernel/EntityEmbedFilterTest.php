@@ -273,7 +273,7 @@ class EntityEmbedFilterTest extends EntityEmbedFilterTestBase {
     /** @var \SimpleXMLElement[] $deleted_embed_warning */
     $deleted_embed_warning = $this->cssSelect('img');
     $this->assertNotEmpty($deleted_embed_warning);
-    if (\Drupal::hasService(file_url_generator)) {
+    if (\Drupal::hasService('file_url_generator')) {
       $src = \Drupal::service('file_url_generator')->generateString('core/modules/media/images/icons/no-thumbnail.png');
     }
     else {
