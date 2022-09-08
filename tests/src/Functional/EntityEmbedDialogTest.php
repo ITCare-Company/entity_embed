@@ -22,6 +22,10 @@ class EntityEmbedDialogTest extends EntityEmbedTestBase {
    * Tests the entity embed dialog.
    */
   public function testEntityEmbedDialog() {
+    if (version_compare(\Drupal::VERSION, 10, '>=')) {
+      $this->markTestSkipped('Only tested on Drupal 9.x.x');
+    }
+
     // Ensure that the route is not accessible without specifying all the
     // parameters.
     $this->drupalGet('/entity-embed/dialog');
@@ -72,6 +76,10 @@ class EntityEmbedDialogTest extends EntityEmbedTestBase {
    * Tests the entity embed button markup.
    */
   public function testEntityEmbedButtonMarkup() {
+    if (version_compare(\Drupal::VERSION, 10, '>=')) {
+      $this->markTestSkipped('Only tested on Drupal 9.x.x');
+    }
+
     // Ensure that the route is not accessible with text format without the
     // button configured.
     $this->drupalGet('/entity-embed/dialog/plain_text/node');
@@ -109,6 +117,10 @@ class EntityEmbedDialogTest extends EntityEmbedTestBase {
    * Tests entity embed functionality.
    */
   public function testEntityEmbedFunctionality() {
+    if (version_compare(\Drupal::VERSION, 10, '>=')) {
+      $this->markTestSkipped('Only tested on Drupal 9.x.x');
+    }
+
     $edit = [
       'entity_id' => $this->node->getTitle() . ' (' . $this->node->id() . ')',
     ];
