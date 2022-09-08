@@ -81,7 +81,13 @@ class FileFieldFormatterTest extends EntityEmbedTestBase {
     // Verify description of the embedded file exists in page.
     $this->assertSession()->responseContains($embed_settings['description']);
     $this->assertSession()->responseNotContains('This placeholder should not be rendered.');
-    $this->assertSession()->linkByHrefExists(\Drupal::service('file_url_generator')->generateString($this->file->getFileUri()), 0, 'Link to the embedded file exists.');
+    if (\Drupal::hasService('file_url_generator')) {
+      $this->assertSession()->linkByHrefExists(\Drupal::service('file_url_generator')->generateString($this->file->getFileUri()), 0, 'Link to the embedded file exists.');
+    }
+    else {
+      // @phpstan-ignore-next-line
+      $this->assertSession()->linkByHrefExists(file_url_transform_relative(file_create_url($this->file->getFileUri())), 0, 'Link to the embedded file exists.');
+    }
   }
 
 }
