@@ -25,6 +25,10 @@ class EntityEmbedEntityBrowserTest extends EntityEmbedDialogTest {
    * Tests the entity browser integration.
    */
   public function testEntityEmbedEntityBrowserIntegration() {
+    if (version_compare(\Drupal::VERSION, 10, '>=')) {
+      $this->markTestSkipped('Only tested on Drupal 9.x.x');
+    }
+
     $this->drupalGet('/entity-embed/dialog/custom_format/node');
     // Verify embed dialog is accessible with custom filter format and
     // default embed button.

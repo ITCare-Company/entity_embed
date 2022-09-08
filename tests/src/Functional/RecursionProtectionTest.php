@@ -17,6 +17,10 @@ class RecursionProtectionTest extends EntityEmbedTestBase {
    * Tests self embedding.
    */
   public function testSelfEmbedding() {
+    if (version_compare(\Drupal::VERSION, 10, '>=')) {
+      $this->markTestSkipped('Only tested on Drupal 9.x.x');
+    }
+
     $node = $this->drupalCreateNode([
       'type' => 'article',
       'title' => "Pirate Chinchilla LLama",
@@ -40,6 +44,10 @@ class RecursionProtectionTest extends EntityEmbedTestBase {
    * Tests circular embedding.
    */
   public function testCircularEmbedding() {
+    if (version_compare(\Drupal::VERSION, 10, '>=')) {
+      $this->markTestSkipped('Only tested on Drupal 9.x.x');
+    }
+
     $node1 = $this->drupalCreateNode([
       'type' => 'article',
       'title' => "Grandpa",

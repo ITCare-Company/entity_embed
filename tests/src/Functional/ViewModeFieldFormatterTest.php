@@ -28,6 +28,10 @@ class ViewModeFieldFormatterTest extends EntityEmbedTestBase {
    * Tests view mode entity embed display.
    */
   public function testViewModeFieldFormatter() {
+    if (version_compare(\Drupal::VERSION, 10, '>=')) {
+      $this->markTestSkipped('Only tested on Drupal 9.x.x');
+    }
+
     // Ensure that view mode plugins have no configuration form.
     foreach ($this->plugins as $plugin) {
       $form = [];
@@ -44,6 +48,10 @@ class ViewModeFieldFormatterTest extends EntityEmbedTestBase {
    * Tests filter using view mode entity embed display plugins.
    */
   public function testFilterViewModePlugins() {
+    if (version_compare(\Drupal::VERSION, 10, '>=')) {
+      $this->markTestSkipped('Only tested on Drupal 9.x.x');
+    }
+
     foreach ($this->plugins as $plugin) {
       $content = '<drupal-entity data-entity-type="node" data-entity-uuid="' . $this->node->uuid() . '" data-entity-embed-display="' . $plugin . '"></drupal-entity>';
       $settings = [];
@@ -62,6 +70,10 @@ class ViewModeFieldFormatterTest extends EntityEmbedTestBase {
    * Tests dependencies on EntityViewMode config entities.
    */
   public function testViewModeDependencies() {
+    if (version_compare(\Drupal::VERSION, 10, '>=')) {
+      $this->markTestSkipped('Only tested on Drupal 9.x.x');
+    }
+
     $button = $this->container
       ->get('entity_type.manager')
       ->getStorage('embed_button')
