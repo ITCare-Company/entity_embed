@@ -22,10 +22,6 @@ class EntityReferenceFieldFormatterTest extends EntityEmbedTestBase {
    * {@inheritdoc}
    */
   protected function setUp(): void {
-    if (version_compare(\Drupal::VERSION, 10, '>=')) {
-      $this->markTestSkipped('Only tested on Drupal 9.x.x');
-    }
-
     parent::setUp();
 
     // Add a new menu entity which does not has a view controller.
