@@ -7,7 +7,7 @@
         "drupal/core": "<9.3"
     },
     "require": {
-        "drupal/embed": "^1.5"
+        "drupal/embed": "^1.7"
     },
     "require-dev": {
         "drupal/ckeditor": "^1",
