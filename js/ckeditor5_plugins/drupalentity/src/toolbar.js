@@ -60,6 +60,17 @@ export default class EntityEmbedToolbar extends Plugin {
     editor.ui.componentFactory.add('editEmbeddedEntity', (locale) => {
       const button = new ButtonView(locale);
       const element = editor.model.document.selection.getSelectedElement();
+      if (!element) {
+        return null;
+      }
+      if (!element.hasAttribute('drupalEntityEntityUuid')) {
+        console.warn(Drupal.t('Unable to create edit link. There must be a value for data-entity-uuid.'));
+        return null;
+      }
+      if (!element.hasAttribute('drupalEntityEntityType')) {
+        console.warn(Drupal.t('Unable to create edit link. There must be a value for data-entity-type.'));
+        return null;
+      }
       const uuid = element.getAttribute('drupalEntityEntityUuid');
       const type = element.getAttribute('drupalEntityEntityType');
       const editUrl = Drupal.url(`entity-embed/edit-embedded/${type}/${uuid}`)
