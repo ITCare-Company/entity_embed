@@ -2,12 +2,12 @@
 
 namespace Drupal\Tests\entity_embed\FunctionalJavascript;
 
+use Drupal\ckeditor5\Plugin\Editor\CKEditor5;
 use Drupal\editor\Entity\Editor;
 use Drupal\filter\Entity\FilterFormat;
 use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
-use Drupal\Tests\TestFileCreationTrait;
 use Drupal\Tests\ckeditor5\Traits\CKEditor5TestTrait;
-use Drupal\ckeditor5\Plugin\Editor\CKEditor5;
+use Drupal\Tests\TestFileCreationTrait;
 use Symfony\Component\Validator\ConstraintViolation;
 
 /**
@@ -68,9 +68,10 @@ class CKEditor5IntegrationTest extends WebDriverTestBase {
    * {@inheritdoc}
    */
   protected function setUp(): void {
-    if (version_compare(\Drupal::VERSION, '10.0', '<')) {
-      $this->markTestSkipped('Tests covering CKEditor 5 only run on Drupal >= 10.0.');
+    if (version_compare(\Drupal::VERSION, '10.1', '<')) {
+      $this->markTestSkipped('Tests covering CKEditor 5 only run on Drupal >= 10.1.');
     }
+
     parent::setUp();
 
     FilterFormat::create([

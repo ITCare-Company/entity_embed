@@ -3,9 +3,6 @@
     "description": "Allows any entity to be embedded within a text area using a WYSIWYG editor.",
     "type": "drupal-module",
     "license": "GPL-2.0-or-later",
-    "conflict": {
-        "drupal/core": "<9.3"
-    },
     "require": {
         "drupal/embed": "^1.7"
     },
