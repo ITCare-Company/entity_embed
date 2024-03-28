@@ -6,6 +6,7 @@ core = 7.x
 dependencies[] = editor
 dependencies[] = entityreference
 
+test_dependencies[] = file_entity
 test_dependencies[] = media
 test_dependencies[] = uuid
 
