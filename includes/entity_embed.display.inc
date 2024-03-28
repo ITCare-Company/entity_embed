@@ -534,9 +534,9 @@ function entity_embed_field_info_instance($formatter_type, $settings = array()) 
  *   The entity to be rendered.
  * @param $formatter_type
  *   A formatter type name.
- * @param int $settings
- *   Optional array of settings to pass in. If omitted, the formatter's default
- *   settings will be returned.
+ * @param array $settings
+ *   An array of settings to pass in. If an empty array is provided, the
+ *   formatter's default settings will be returned.
  * @param $form
  *   A form array().
  * @param $form_state
@@ -546,7 +546,7 @@ function entity_embed_field_info_instance($formatter_type, $settings = array()) 
  * the field itself. All we want is the field info array in a format that lets
  * us hack hook_field_formatter_settings_form().
  */
-function entity_embed_field_info_formatter_settings($entity_type, $entity, $formatter_type, $settings = array(), $form, $form_state) {
+function entity_embed_field_info_formatter_settings($entity_type, $entity, $formatter_type, $settings, $form, $form_state) {
   $formatter_settings = array();
 
   $field_formatter_info = field_info_formatter_types($formatter_type);
