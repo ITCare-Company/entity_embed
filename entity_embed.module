@@ -33,32 +33,21 @@ function entity_embed_menu() {
     'title' => 'Preview embedded entity',
     'page callback' => 'entity_embed_preview',
     'page arguments' => array(2),
-    'access callback' => '_entity_embed_preview_format_access',
-    'access arguments' => array(2),
-    'delivery callback' => 'ajax_deliver',
+    'access callback' => 'editor_dialog_access',
+    'access arguments' => array(2, 'entity_embed'),
     'theme callback' => 'ajax_base_page_theme',
     'type' => MENU_CALLBACK,
   );
 
-  $items['entity-embed/dialog/entity-embed/%entity_embed_filter_format/%entity_embed_embed_button'] = array(
+  $items['entity-embed/dialog/%entity_embed_filter_format/%entity_embed_embed_button'] = array(
     'title' => 'Add/Edit embedded entity',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('entity_embed_dialog_form', 3, 4),
-    'access callback' => '_entity_embed_button_is_enabled',
-    'access arguments' => array(3, 4),
+    'page arguments' => array('entity_embed_dialog_form', 2, 3),
+    'access callback' => 'entity_embed_embed_button_format_access_check',
+    'access arguments' => array(2, 3),
     'file' => 'entity_embed.admin.inc',
-    'delivery callback' => 'ajax_deliver_dialog',
     'theme callback' => 'ajax_base_page_theme',
     'type' => MENU_CALLBACK,
-  );
-
-  $items['entity-embed/autocomplete-entity/%entity_embed_filter_format/%entity_embed_embed_button'] = array(
-    'title' => 'Autocomplete for embedded entities',
-    'page callback' => 'entity_embed_autocomplete_entity',
-    'page arguments' => array(2, 3),
-    'access callback' => '_entity_embed_button_is_enabled',
-    'access arguments' => array(2, 3),
-    'type' => MENU_CALLBACK
   );
 
   return $items;
@@ -86,6 +75,28 @@ function entity_embed_help($path, $arg) {
     case 'admin/config/content/embed-button':
       return '<p>' . t("Embed buttons define the buttons that can be added to CKEditor's toolbar. All buttons correspond to the selcted entity type, although a particular entity type can have more than one button. After you've created the desired buttons, go to <a href='@formats'>text formats configuration</a> page to add them to CKEditor's toolbar for the desired text formats.", array('@formats' => url('admin/config/content/formats'))) . '</p>';
   }
+}
+
+/**
+ * Implements hook_library().
+ */
+function entity_embed_library() {
+  $libraries['entity_embed'] = array(
+    'title' => 'Entity Embed',
+    'website' => 'http://www.drupal.org',
+    'version' => VERSION,
+    'js' => array(
+      drupal_get_path('module', 'entity_embed') . '/js/embed.js' => array(
+        'weight' => 2,
+      ),
+    ),
+    'dependencies' => array(
+      array('system', 'jquery'),
+      array('system', 'drupal.ajax'),
+    ),
+  );
+
+  return $libraries;
 }
 
 /**
@@ -274,7 +285,7 @@ function entity_embed_embed_button_delete($embed_button) {
 }
 
 /**
- * Access callback: Checks access for previewing embedded entities.
+ * Checks whether the embed button is enabled for the given text editor.
  *
  * @param $format
  *   A text format object.
@@ -285,44 +296,49 @@ function entity_embed_embed_button_delete($embed_button) {
  *
  * @see entity_embed_menu()
  */
-function _entity_embed_preview_format_access($format) {
-  return user_access('use text format ' . $format->format);
+function entity_embed_embed_button_format_access_check($filter_format, $embed_button) {
+  return editor_dialog_access($filter_format, 'entity_embed') && entity_embed_button_is_enabled($filter_format, $embed_button);
 }
 
 /**
- * Checks whether or not the embed button is enabled for given text format.
- *
- * Returns allowed if the editor toolbar contains the embed button and neutral
- * otherwise.
+ * Checks if the embed button is enabled in a text format.
  *
  * @param $filter_format
- *   The filter format to which this dialog corresponds.
+ *   The filter format to check.
  * @param $embed_button
- *   The embed button to which this dialog corresponds.
+ *   The embed button to check.
  *
  * @return boolean
  *   The access result.
  */
-function _entity_embed_button_is_enabled($filter_format, $embed_button) {
+function entity_embed_button_is_enabled($filter_format, $embed_button) {
   editor_format_ensure_additional_properties($filter_format);
 
-  if (!editor_load($filter_format->editor)) {
+  if (!in_array($filter_format->editor, array('ckeditor', 'ckeditor5'), TRUE)) {
     return FALSE;
   }
 
-  $button_name = $embed_button->name;
-
-  if (!empty($filter_format->editor_settings['toolbar'])) {
-    foreach ($filter_format->editor_settings['toolbar'] as $row) {
-      foreach ($row as $button_group) {
-        if (in_array($button_name, $button_group['items'])) {
-          return TRUE;
+  $has_button = FALSE;
+  $settings = $filter_format->editor_settings;
+  if ($filter_format->editor === 'ckeditor') {
+    foreach ($settings['toolbar'] as $row) {
+      foreach ($row as $group) {
+        if (in_array($embed_button->name, $group['items'])) {
+          $has_button = TRUE;
+          break 2;
         }
       }
     }
   }
+  elseif ($filter_format->editor === 'ckeditor5') {
+    // The schema for CKEditor5 has changed, therefore we need to check for
+    // the toolbar items differently.
+    if ($settings['toolbar']['items'] && in_array($embed_button->name, $settings['toolbar']['items'])) {
+      $has_button = TRUE;
+    }
+  }
 
-  return FALSE;
+  return $has_button;
 }
 
 /**
@@ -345,7 +361,7 @@ function entity_embed_flush_caches() {
  */
 function entity_embed_preview($filter_format) {
   $query_parameters = drupal_get_query_parameters();
-  $text = $query_parameters['value'];
+  $text = isset($query_parameters['text']) ? $query_parameters['text'] : $query_parameters['value'];
 
   if ($text == '') {
     drupal_exit();
@@ -354,63 +370,18 @@ function entity_embed_preview($filter_format) {
   // @todo: remove contextual links.
   $entity_output = check_markup($text, $filter_format->format);
 
-  $commands[] = entity_embed_command_insert($entity_output);
-
-  return array(
-    '#type' => 'ajax',
-    '#commands' => $commands,
-  );
-}
-
-/**
- * Page callback: Autocomplete for entities.
- *
- * @param $entity_type
- *   The type of the entity being saved.
- * @param $entity_id
- *   The ID of the entity being saved.
- *
- * @return
- *   Any matching entities output as JSON.
- */
-function entity_embed_autocomplete_entity($filter_format, $embed_button, $string) {
-  $matches = array();
-
-  $entity_type_id = $embed_button->entity_type;
-  $entity_type_bundles = $embed_button->entity_type_bundles;
-  $entity_type = entity_get_info($entity_type_id);
-
-  // Prevent errors if the entity type has no label key.
-  if (empty($entity_type['entity keys']['label'])) {
-    return drupal_json_output($matches);
+  if (dialog_is_ajax()) {
+    $commands = array();
+    $commands[] = entity_embed_command_insert($entity_output);
+    return array(
+      '#type' => 'ajax',
+      '#commands' => $commands,
+    );
   }
-
-  $query = new EntityFieldQuery();
-  $query->entityCondition('entity_type', $entity_type_id)
-    ->propertyCondition($entity_type['entity keys']['label'], $string, 'STARTS_WITH')
-    ->range(0, 10)
-    ->propertyOrderBy($entity_type['entity keys']['label'], 'DESC')
-    ->execute();
-
-  // Add optional bundle restrictions.
-  if (!empty($entity_type_bundles)) {
-    $query->entityCondition('bundle', array_keys($entity_type_bundles));
+  else {
+    echo $entity_output;
+    drupal_exit();
   }
-
-  $results = $query->execute();
-
-  if (!empty($results)) {
-    $ids = array_keys($results[$entity_type_id]);
-    $entities = entity_load($entity_type_id, $ids);
-
-    foreach ($entities as $entity) {
-      $label = entity_label($entity_type_id, $entity);
-
-      $matches[$label] = check_plain($label);
-    }
-  }
-
-  return drupal_json_output($matches);
 }
 
 /**
@@ -423,7 +394,6 @@ function entity_embed_filter_info() {
     'process callback' => '_entity_embed_render_placeholders',
     'cache' => FALSE,
     'tips callback' => '_entity_embed_render_placeholders_tips',
-    'js settings callback' => '_entity_embed_entity_embed_js_settings',
   );
 
   return $filters;
@@ -449,34 +419,6 @@ function _entity_embed_render_placeholders_tips($filter, $format, $long = FALSE)
 }
 
 /**
- * Implements callback_filter_js_settings().
- *
- * Entity Embed JS settings callback: return settings for JavaScript.
- */
-function _entity_embed_entity_embed_js_settings($filter, $format) {
-  // Add user-defined buttons.
-  $embed_buttons = entity_embed_embed_button_load_all();
-
-  $buttons = array();
-
-  foreach ($embed_buttons as $embed_button) {
-    $buttons[$embed_button->name] = array(
-      'id' => check_plain($embed_button->name),
-      'name' => check_plain($embed_button->admin_title),
-      'label' => check_plain($embed_button->admin_title),
-      'entity_type' => check_plain($embed_button->entity_type),
-      'image' => check_plain(_entity_embed_button_image($embed_button->button_icon_fid)),
-    );
-  }
-
-  return array(
-    'DrupalEntity_dialogTitleAdd' => t('Insert entity'),
-    'DrupalEntity_dialogTitleEdit' => t('Edit entity'),
-    'DrupalEntity_buttons' => $buttons,
-  );
-}
-
-/**
  * Implements callback_filter_process().
  *
  * Converts embedded entity placeholders into rendered entities.
@@ -492,6 +434,13 @@ function _entity_embed_render_placeholders($text, $filter, $format, $langcode, $
       $entity_type = $node->getAttribute('data-entity-type');
       $entity = NULL;
       $entity_output = '';
+
+      // data-entity-embed-settings is deprecated, make sure we convert it to
+      // data-entity-embed-display-settings.
+      if (($settings = $node->getAttribute('data-entity-embed-settings')) && !$node->hasAttribute('data-entity-embed-display-settings')) {
+        $node->setAttribute('data-entity-embed-display-settings', $settings);
+        $node->removeAttribute('data-entity-embed-settings');
+      }
 
       try {
         // Load the entity either by UUID (preferred) or ID.

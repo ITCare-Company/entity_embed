@@ -17,7 +17,7 @@
  */
 function entity_embed_command_insert($html) {
   return array(
-    'command' => 'entityEmbedInsertEditor',
-    'html' => $html,
+    'command' => 'embed_insert',
+    'data' => $html,
   );
 }

@@ -36,9 +36,7 @@ function entity_embed_dialog_form($form, &$form_state, $filter_format, $embed_bu
     'data-entity-uuid' => '',
     'data-entity-id' => '',
     'data-entity-embed-display' => 'entityreference:entityreference_entity_view',
-    'data-entity-embed-settings' => array(),
-    'data-align' => '',
-    'data-caption' => '',
+    'data-entity-embed-display-settings' => isset($form_state['entity_element']['data-entity-embed-settings']) ? $form_state['entity_element']['data-entity-embed-settings'] : array(),
   );
 
   if (empty($form_state['step'])) {
@@ -52,7 +50,7 @@ function entity_embed_dialog_form($form, &$form_state, $filter_format, $embed_bu
   }
 
   $form['#tree'] = TRUE;
-  $form['#attached']['library'][] = array('editor', 'drupal.editor.dialog');
+  $form['#attached']['library'][] = array('editor', 'editor.dialog');
   $form['#prefix'] = '<div id="entity-embed-dialog-form">';
   $form['#suffix'] = '</div>';
 
@@ -75,6 +73,7 @@ function entity_embed_dialog_form($form, &$form_state, $filter_format, $embed_bu
       }
 
       $default = '';
+
       if (!empty($entity_element['data-entity-uuid']) && module_exists('uuid')) {
         $entity = entity_uuid_load($entity_element['data-entity-type'], array($entity_element['data-entity-uuid']));
         $entity = reset($entity);
@@ -84,14 +83,14 @@ function entity_embed_dialog_form($form, &$form_state, $filter_format, $embed_bu
       }
 
       if ($entity) {
-        $default = entity_label($entity_element['data-entity-type'], $entity);
+        $default = entity_label($entity_element['data-entity-type'], $entity) . ' [id: ' . $entity_element['data-entity-id'] . ']';
       }
 
       $form['attributes']['data-entity-id'] = array(
         '#type' => 'textfield',
         '#title' => $label,
         '#default_value' => $default,
-        '#autocomplete_path' => 'entity-embed/autocomplete-entity/' . $filter_format->format . '/' . $embed_button->name,
+        '#autocomplete_path' => 'ctools/autocomplete/' . $embed_button->entity_type,
         '#required' => TRUE,
         '#description' => t('Type label and pick the right one from suggestions. Note that the unique ID will be saved.'),
       );
@@ -203,15 +202,15 @@ function entity_embed_dialog_form($form, &$form_state, $filter_format, $embed_bu
         '#required' => TRUE,
         '#ajax' => array(
           'callback' => 'updatePluginConfigurationForm',
-          'wrapper' => 'data-entity-embed-settings-wrapper',
+          'wrapper' => 'data-entity-embed-display-settings-wrapper',
           'effect' => 'fade',
         ),
         // Hide the selection if only one option is available.
         '#access' => count($display_plugin_options) > 1,
       );
-      $form['attributes']['data-entity-embed-settings'] = array(
+      $form['attributes']['data-entity-embed-display-settings'] = array(
         '#type' => 'container',
-        '#prefix' => '<div id="data-entity-embed-settings-wrapper">',
+        '#prefix' => '<div id="data-entity-embed-display-settings-wrapper">',
         '#suffix' => '</div>',
       );
       $form['attributes']['data-embed-button'] = array(
@@ -232,11 +231,15 @@ function entity_embed_dialog_form($form, &$form_state, $filter_format, $embed_bu
 
       // Retrieve the settings appropriate for the currently selected formatter.
       if (!empty($formatter_type)) {
-        if (is_string($entity_element['data-entity-embed-settings'])) {
-          $entity_element['data-entity-embed-settings'] = drupal_json_decode($entity_element['data-entity-embed-settings']);
+
+        if (empty($entity_element['data-entity-embed-display-settings'])) {
+          $entity_element['data-entity-embed-display-settings'] = array();
+        }
+        elseif (is_string($entity_element['data-entity-embed-display-settings'])) {
+          $entity_element['data-entity-embed-display-settings'] = drupal_json_decode($entity_element['data-entity-embed-display-settings']) ? drupal_json_decode($entity_element['data-entity-embed-display-settings']) : array();
         }
 
-        $form['attributes']['data-entity-embed-settings'] += entity_embed_field_info_formatter_settings($entity_element['data-entity-type'], $entity, $formatter_type, $entity_element['data-entity-embed-settings'], $form, $form_state);
+        $form['attributes']['data-entity-embed-display-settings'] += entity_embed_field_info_formatter_settings($entity_element['data-entity-type'], $entity, $formatter_type, $entity_element['data-entity-embed-display-settings'], $form, $form_state);
       }
 
       $filters = filter_list_format($filter_format->format);
@@ -316,7 +319,17 @@ function entity_embed_dialog_form_validate($form, &$form_state) {
   switch ($form_state['step']) {
     case 'select':
       if ($entity_type = $values['attributes']['data-entity-type']) {
-        $title = trim($values['attributes']['data-entity-id']);
+        $title = $values['attributes']['data-entity-id'];
+        $preg_matches = array();
+        $match = preg_match('/\[id: (\d+)\]/', $title, $preg_matches);
+
+        if (!$match) {
+          $match = preg_match('/^id: (\d+)/', $title, $preg_matches);
+        }
+
+        if ($match) {
+          $title = $preg_matches[1];
+        }
 
         $entity_info = entity_get_info($entity_type);
 
@@ -396,7 +409,7 @@ function entity_embed_dialog_form_validate($form, &$form_state) {
  *   An associative array containing the current state of the form.
  */
 function updatePluginConfigurationForm(&$form, $form_state) {
-  return $form['attributes']['data-entity-embed-settings'];
+  return $form['attributes']['data-entity-embed-display-settings'];
 }
 
 /**
@@ -481,9 +494,18 @@ function submitEmbedForm(&$form, $form_state) {
   }
   else {
     // Serialize entity embed settings to JSON string.
-    if (!empty($values['attributes']['data-entity-embed-settings'])) {
-      $values['attributes']['data-entity-embed-settings'] = json_encode($values['attributes']['data-entity-embed-settings'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+    if (!empty($values['attributes']['data-entity-embed-display-settings'])) {
+      $values['attributes']['data-entity-embed-display-settings'] = drupal_json_encode($values['attributes']['data-entity-embed-display-settings']);
     }
+
+    // Filter out empty attributes.
+    $values['attributes'] = array_filter($values['attributes'], function ($value) {
+      return (bool) mb_strlen((string) $value);
+    });
+
+    // Allow other modules to alter the values before getting submitted to the
+    // WYSIWYG.
+    drupal_alter('entity_embed_values', $values, $entity, $display);
 
     $commands[] = editor_command_editor_dialog_save($values);
     $commands[] = dialog_command_close_modal_dialog();

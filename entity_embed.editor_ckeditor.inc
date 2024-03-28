@@ -9,17 +9,13 @@
  * Implements hook_editor_ckeditor_plugins().
  */
 function entity_embed_editor_ckeditor_plugins() {
-  $plugins = array(
-    'drupalentity' => array(
-      'path' => drupal_get_path('module', 'entity_embed') . '/js/plugins/drupalentity',
-      'file' => 'plugin.js',
-      'required_html' => array(
-        array(
-          'tags' => array('drupal-entity'),
-          'attributes' => array('data-entity-type', 'data-entity-id', 'data-entity-uuid', 'data-view-mode', 'data-entity-embed-display', 'data-entity-embed-settings', 'data-entity-label', 'data-embed-button'),
-        ),
-      )
-    ),
+  $path = drupal_get_path('module', 'entity_embed');
+
+  $plugins['drupalentity'] = array(
+    'file' => $path . '/plugins/entity_embed.drupalentity.inc',
+    'libraries' => array(array('entity_embed', 'entity_embed')),
+    'plugin' => $path . '/js/plugins/drupalentity/plugin.js',
+    'config callback' => 'editor_embed_drupalentity_config',
   );
 
   // Add user-defined buttons.
@@ -39,6 +35,12 @@ function entity_embed_editor_ckeditor_plugins() {
 
     $buttons[$embed_button->name] = array(
       'label' => check_plain($embed_button->admin_title),
+      'required_html' => array(
+        array(
+          'tags' => array('drupal-entity'),
+          'attributes' => array('data-embed-button', 'data-entity-type', 'data-entity-uuid', 'data-entity-id', 'data-entity-embed-display', 'data-entity-embed-display-settings', 'data-align', 'data-caption'),
+        ),
+      ),
       'image' => $icon,
     );
   }

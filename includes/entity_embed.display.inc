@@ -21,9 +21,9 @@
  */
 function entity_embed_render_entity($entity_type, $entity, array $context = array()) {
   // Support the deprecated view-mode data attribute.
-  if (isset($context['data-view-mode']) && !isset($context['data-entity-embed-display']) && !isset($context['data-entity-embed-settings'])) {
+  if (isset($context['data-view-mode']) && !isset($context['data-entity-embed-display']) && !isset($context['data-entity-embed-display-settings'])) {
     $context['data-entity-embed-display'] = 'entityreference:entityreference_entity_view';
-    $context['data-entity-embed-settings'] = array('view_mode' => $context['data-view-mode']);
+    $context['data-entity-embed-display-settings'] = array('view_mode' => &$context['data-view-mode']);
   }
 
   list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
@@ -33,13 +33,30 @@ function entity_embed_render_entity($entity_type, $entity, array $context = arra
     'data-entity-id' => $id,
     'data-entity-type' => $entity_type,
     'data-entity-embed-display' => 'entityreference:entityreference_entity_view',
-    'data-entity-embed-settings' => array(),
+    'data-entity-embed-display-settings' => array(),
   );
+
+  // If the data-entity-embed-display-settings isn't an array reset  it,
+  // otherwise we'll encounter a fatal error when calling
+  // render_entity_embed_display_plugin() further down the line.
+  if (!is_array($context['data-entity-embed-display-settings'])) {
+    watchdog('entity_embed', 'Invalid display settings encountered. Could not process following settings for entity type "@entity_type" with the uuid "@id": @settings', array(
+      '@settings' => $context['data-entity-embed-display-settings'],
+      '@entity_type' => $entity_type,
+      '@id' => $id,
+    ), WATCHDOG_WARNING);
+    $context['data-entity-embed-display-settings'] = array();
+  }
 
   // The default Entity Embed Display plugin has been deprecated by the
   // rendered entity field formatter.
   if ($context['data-entity-embed-display'] === 'default') {
     $context['data-entity-embed-display'] = 'entityreference:entityreference_entity_view';
+  }
+
+  // The caption text is double-encoded, so decode it here.
+  if (isset($context['data-caption'])) {
+    $context['data-caption'] = decode_entities($context['data-caption']);
   }
 
   // Allow modules to alter the entity prior to embed rendering.
@@ -51,22 +68,27 @@ function entity_embed_render_entity($entity_type, $entity, array $context = arra
     $entity_type,
     $entity,
     $context['data-entity-embed-display'],
-    $context['data-entity-embed-settings'],
+    $context['data-entity-embed-display-settings'],
     $context
   );
 
-  // Maintain data-align if it is there.
-  if (isset($context['data-align'])) {
-    $build['#attributes']['data-align'] = $context['data-align'];
+  if (isset($context['class'])) {
+    if (is_string($context['class'])) {
+      $context['class'] = explode(' ', $context['class']);
+    }
   }
-  elseif ((isset($context['class']))) {
-    $build['#attributes']['class'][] = $context['class'];
+  else {
+    $context['class'] = array();
+  }
+  $context['class'][] = 'embedded-entity';
+
+  // Maintain data- attributes.
+  if (isset($context)) {
+    $build['#attributes'] = $context;
   }
 
-  // Maintain data-caption if it is there.
-  if (isset($context['data-caption'])) {
-    $build['#attributes']['data-caption'] = $context['data-caption'];
-  }
+  // Make sure that access to the entity is respected.
+  $build['#access'] = entity_access('view', $entity_type, $entity);
 
   // @todo Should this hook get invoked if $build is an empty array?
   drupal_alter(array("{$context['data-entity-type']}_embed", 'entity_embed'), $build, $entity, $context);
@@ -163,6 +185,8 @@ function render_entity_embed_display_plugin($entity_type, $entity, $plugin_id, a
       }
     }
   }
+
+  return array();
 }
 
 /**
@@ -433,32 +457,38 @@ function entity_embed_field_info_field($entity_type, $module) {
 
   // Support the entityreference module.
   if ('entityreference' == $module) {
+    $field['type'] = 'entityreference';
     $field['settings'] = field_info_field_settings('entityreference');
     $field['settings']['target_type'] = $entity_type;
   }
 
   // Support the user_reference (references) module.
   elseif ('user_reference' == $module) {
+    $field['type'] = 'user_reference';
     $field['settings'] = field_info_field_settings('user_reference');
   }
 
   // Support node_reference (references) module.
   elseif ('node_reference' == $module) {
+    $field['type'] = 'node_reference';
     $field['settings'] = field_info_field_settings('node_reference');
   }
 
   // Support taxonomy (core) module.
   elseif ('taxonomy' == $module) {
+    $field['type'] = 'taxonomy_term_reference';
     $field['settings'] = field_info_field_settings('taxonomy_term_reference');
   }
 
   // Support file (core) and file_entity modules.
   elseif ('file' == $module || 'file_entity' == $module) {
+    $field['type'] = 'file';
     $field['settings'] = field_info_field_settings('file');
   }
 
   // Support file (core) module.
   elseif ('image' == $module) {
+    $field['type'] = 'image';
     $field['settings'] = field_info_field_settings('image');
   }
 
