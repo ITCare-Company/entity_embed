@@ -8,6 +8,7 @@ dependencies[] = entityreference
 
 test_dependencies[] = file_entity
 test_dependencies[] = media
+test_dependencies[] = services
 test_dependencies[] = uuid
 
 files[] = includes/EntityEmbedEntityNotFoundException.inc
