@@ -10,11 +10,13 @@
  */
 function entity_embed_filter_info() {
   $filters['entity_embed'] = array(
-    'title' => t('Render embedded entities'),
-    'description' => t('Replaces embedded entity placeholders with the rendered entity.'),
+    'title' => t('Display embedded entities'),
+    'description' => t('Embeds entities using data attributes: data-entity-type, data-entity-id, and data-view-mode. Should usually run as the last filter, since it does not contain user input.'),
+    'type' => TYPE_TRANSFORM_REVERSIBLE,
     'process callback' => '_entity_embed_render_placeholders',
     'cache' => FALSE,
     'tips callback' => '_entity_embed_render_placeholders_tips',
+    'weight' => 100,
   );
 
   return $filters;
