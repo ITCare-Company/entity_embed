@@ -139,7 +139,7 @@ class EntityEmbedDialogTest extends EntityEmbedTestBase {
     $this->assertResponse(200, 'Embed dialog is accessible with correct filter format and embed button.');
 
     // Ensure form structure of the 'select' step and submit form.
-    $this->assertFieldByName('attributes[data-entity-id]', '', 'Entity ID/UUID field is present.');
+    $this->assertFieldByName('entity_id', '', 'Entity ID/UUID field is present.');
 
     // Check that 'Next' is a primary button.
     $this->assertFieldByXPath('//input[contains(@class, "button--primary")]');
@@ -521,16 +521,26 @@ class EntityReferenceFieldFormatterTest extends EntityEmbedTestBase {
 
     // Ensure that correct form attributes are returned for
     // 'entityreference:entityreference_entity_id' plugin.
+    $entity_element = array(
+      'data-entity-type' => 'node',
+      'data-entity-embed-display' => 'entityreference:entityreference_entity_id',
+      'data-entity-embed-display-settings' => array(),
+    );
     $form = array();
     $form_state = form_state_defaults();
-    $conf_form = entity_embed_field_info_formatter_settings('node', $this->node, 'entityreference_entity_id', array(), $form, $form_state);
+    $conf_form = entity_embed_field_info_formatter_settings($this->node, $entity_element, 'entityreference_entity_id', $form, $form_state);
     $this->assertIdentical(array_keys($conf_form), array());
 
     // Ensure that correct form attributes are returned for
     // 'entityreference:entity_reference:entityreference_entity_view' plugin.
+    $entity_element = array(
+      'data-entity-type' => 'node',
+      'data-entity-embed-display' => 'entityreference:entityreference_entity_view',
+      'data-entity-embed-display-settings' => array(),
+    );
     $form = array();
     $form_state = form_state_defaults();
-    $conf_form = entity_embed_field_info_formatter_settings('node', $this->node, 'entityreference_entity_view', array(), $form, $form_state);
+    $conf_form = entity_embed_field_info_formatter_settings($this->node, $entity_element, 'entityreference_entity_view', $form, $form_state);
     $this->assertIdentical(array_keys($conf_form), array('view_mode', 'links', 'use_content_language', 'hide_title'));
     $this->assertIdentical($conf_form['view_mode']['#type'], 'select');
     $this->assertIdentical((string) $conf_form['view_mode']['#title'], 'View mode');
@@ -539,9 +549,14 @@ class EntityReferenceFieldFormatterTest extends EntityEmbedTestBase {
 
     // Ensure that correct form attributes are returned for
     // 'entityreference:entity_reference:entityreference_label' plugin.
+    $entity_element = array(
+      'data-entity-type' => 'node',
+      'data-entity-embed-display' => 'entityreference:entityreference_label',
+      'data-entity-embed-display-settings' => array(),
+    );
     $form = array();
     $form_state = form_state_defaults();
-    $conf_form = entity_embed_field_info_formatter_settings('node', $this->node, 'entityreference_label', array(), $form, $form_state);
+    $conf_form = entity_embed_field_info_formatter_settings($this->node, $entity_element, 'entityreference_label', $form, $form_state);
     $this->assertIdentical(array_keys($conf_form), array('bypass_access', 'link'));
     $this->assertIdentical($conf_form['link']['#type'], 'checkbox');
     $this->assertIdentical((string) $conf_form['link']['#title'], 'Link label to the referenced entity');
@@ -637,9 +652,14 @@ class FileFieldFormatterTest extends EntityEmbedTestBase {
     ));
 
     // Ensure that correct form attributes are returned for the file_default plugin.
+    $entity_element = array(
+      'data-entity-type' => 'file',
+      'data-entity-embed-display' => 'file:file_default',
+      'data-entity-embed-display-settings' => array(),
+    );
     $form = array();
     $form_state = form_state_defaults();
-    $conf_form = entity_embed_field_info_formatter_settings('file', $this->file, 'file_default', array(), $form, $form_state);
+    $conf_form = entity_embed_field_info_formatter_settings($this->file, $entity_element, 'file_default', $form, $form_state);
     // Ensure that correct form attributes are returned for the file_default plugin.
     $this->assertIdentical(array_keys($conf_form), array());
 
@@ -713,13 +733,20 @@ class ImageFieldFormatterTest extends EntityEmbedTestBase {
     ));
 
     // Ensure that correct form attributes are returned for the image plugin.
+    $entity_element = array(
+      'data-entity-type' => 'file',
+      'data-entity-embed-display' => 'image:image',
+      'data-entity-embed-display-settings' => array(),
+    );
     $form = array();
     $form_state = form_state_defaults();
-    $conf_form = entity_embed_field_info_formatter_settings('file', $this->image, 'image', array(), $form, $form_state);
+    $conf_form = entity_embed_field_info_formatter_settings($this->image, $entity_element, 'image', $form, $form_state);
     // Ensure that correct form attributes are returned for the image plugin.
     $this->assertIdentical(array_keys($conf_form), array(
       'image_style',
       'image_link',
+      'alt',
+      'title',
     ));
     $this->assertIdentical($conf_form['image_style']['#type'], 'select');
     $this->assertIdentical((string) $conf_form['image_style']['#title'], 'Image style');

@@ -157,7 +157,7 @@ function render_entity_embed_display_plugin($entity_type, $entity, $plugin_id, a
 
     // Set $items to what the field formatter expects. See hook_field_load(),
     // and note that, here, $entity is already a fully loaded entity.
-    $items = entity_embed_field_get_items($entity_type, $id, $field_formatter_info['module']);
+    $items = entity_embed_field_get_items($entity_type, $id, $field_formatter_info['module'], $context);
 
     // Invoke hook_field_formatter_prepare_view() and
     // hook_field_formatter_view(). Note that we are reusing field formatter
@@ -171,14 +171,15 @@ function render_entity_embed_display_plugin($entity_type, $entity, $plugin_id, a
     // hooks.
     $field = entity_embed_field_info_field($entity_type, $field_formatter_info['module']);
     $instance = entity_embed_field_info_instance($formatter_type, $plugin_configuration);
+    $langcode = entity_embed_get_langcode($context);
 
     if (($function = ($field_formatter_info['module'] . '_field_formatter_prepare_view')) && function_exists($function)) {
       // hook_field_formatter_prepare_view() alters $items by reference.
       $grouped_items = array($id => &$items);
-      $function($entity_type, array($id => $entity), $field, array($id => $instance), $context['data-langcode'], $grouped_items, array($id => $display));
+      $function($entity_type, array($id => $entity), $field, array($id => $instance), $langcode, $grouped_items, array($id => $display));
     }
     if (($function = ($field_formatter_info['module'] . '_field_formatter_view')) && function_exists($function)) {
-      $element = $function($entity_type, $entity, $field, $instance, $context['data-langcode'], $items, $display);
+      $element = $function($entity_type, $entity, $field, $instance, $langcode, $items, $display);
       // We passed the entity as $items[0], so return the corresponding element.
       if (isset($element[0])) {
         return $element[0];
@@ -187,6 +188,28 @@ function render_entity_embed_display_plugin($entity_type, $entity, $plugin_id, a
   }
 
   return array();
+}
+
+/**
+ * Gets the current language code.
+ *
+ * @param array $context
+ *   (optional) Array of context values, corresponding to the attributes on
+ *   the embed HTML tag.
+ *
+ * @return string
+ *   The langcode present in the 'data-langcode', if present, or the current
+ *   langcode, otherwise.
+ */
+function entity_embed_get_langcode($context = array()) {
+  global $language;
+  $langcode = $language->language;
+
+  if (!empty($context['data-langcode'])) {
+    $langcode = $context['data-langcode'];
+  }
+
+  return $langcode;
 }
 
 /**
@@ -250,41 +273,9 @@ function entity_embed_get_entity_field_formatters($entity_type, $entity = NULL) 
 
   $entity_formatters = array();
 
+  drupal_alter('entity_embed_field_formatters', $formatters, $entity_type, $entity);
+
   foreach ($formatters as $formatter => $info) {
-    // Files require special handling.
-    if ($entity_type == 'file') {
-      // Files behave differently depending on whether the File Entity module is
-      // available.
-      if (module_exists('file_entity')) {
-        // With the File Entity module enabled, file entities require some
-        // special handling. Unlike standard field formatters which specify a
-        // list of compatible entity types and will work with any entity as long
-        // as it is the correct type, file formatters may only support files
-        // with specific MIME types.
-        if (isset($entity) && isset($info['file formatter']['mime types']) && isset($entity->filemime)) {
-          if (!file_entity_match_mimetypes($info['file formatter']['mime types'], $entity->filemime)) {
-            // Skip the incompatible formatter.
-            continue;
-          }
-        }
-      }
-      else {
-        // The 'Rendered entity' formatter can not be used for files unless the
-        // File Entity module is available.
-        if ($formatter == 'entityreference_entity_view') {
-          // Skip the incompatible formatter.
-          continue;
-        }
-      }
-    }
-
-    // With the File Image Formatters module enabled, image field formatters
-    // will appear twice.
-    if ($info['module'] == 'file_image_formatters' && module_exists('file_image_formatters')) {
-      // Skip the duplicate formatter.
-      continue;
-    }
-
     foreach ($info['field types'] as $field_type) {
       if (in_array($field_type, $field_types)) {
         $entity_formatters[$info['module'] . ':' . $formatter] = $info['label'];
@@ -319,6 +310,10 @@ function entity_embed_get_entity_field_formatters($entity_type, $entity = NULL) 
  * @param string $module
  *   The module that implements the field formatter we are going to use.
  *
+ * @param array $context
+ *   (optional) Array of context values, corresponding to the attributes on
+ *   the embed HTML tag.
+ *
  * In our version of field_get_items() we don't care at all about the field
  * or the entity that it is attached to. All we want is the output of the
  * formatter. So the point of this is return an $items array in the format
@@ -328,7 +323,7 @@ function entity_embed_get_entity_field_formatters($entity_type, $entity = NULL) 
  * Ideally this would be a simple hook letting other modules do the work, but
  * we will hard-code support for the major players here.
  */
-function entity_embed_field_get_items($entity_type, $entity_id, $module) {
+function entity_embed_field_get_items($entity_type, $entity_id, $module, $context = array()) {
   // Whatever module is involved, we're almost definitely going to need the
   // entity loaded and an access check.
   $entity = entity_load_single($entity_type, $entity_id);
@@ -355,10 +350,21 @@ function entity_embed_field_get_items($entity_type, $entity_id, $module) {
     );
   }
 
-  // Support the file  and image modules (core).
+  // Support the file and image modules (core).
   elseif ('file' == $module || 'image' == $module) {
     // The file and image modules just expect an array version of the object.
     $item += (array) $entity;
+
+    // Add alt + title text from the embed code to the field item, passing it
+    // along to the field formatter. This enables both fields to be specified
+    // per embed, instead of only per file entity.
+    if (isset($context['alt'])) {
+      $item['alt'] = $context['alt'];
+    }
+
+    if (isset($context['title'])) {
+      $item['title'] = $context['title'];
+    }
   }
 
   // Support the user_reference (references) module.
@@ -386,7 +392,7 @@ function entity_embed_field_get_items($entity_type, $entity_id, $module) {
 
   // If we didn't find anything, give other modules a chance.
   else {
-    $contrib_items = module_invoke_all('entity_embed_field_get_items', $entity_type, $entity_id, $module);
+    $contrib_items = module_invoke_all('entity_embed_field_get_items', $entity_type, $entity_id, $module, $context);
     // Make sure we only get 1 item.
     if (!empty($contrib_items)) {
       $item += array_pop($contrib_items);
@@ -528,15 +534,12 @@ function entity_embed_field_info_instance($formatter_type, $settings = array()) 
 /**
  * Our own field-less entity-less version of field_info_formatter_settings().
  *
- * @param $entity_type
- *   The type of entity, i.e. 'node', 'user'.
  * @param $entity
  *   The entity to be rendered.
+ * @param $entity_element
+ *   An associative array of properties taken from the embedded entity element.
  * @param $formatter_type
  *   A formatter type name.
- * @param array $settings
- *   An array of settings to pass in. If an empty array is provided, the
- *   formatter's default settings will be returned.
  * @param $form
  *   A form array().
  * @param $form_state
@@ -546,7 +549,7 @@ function entity_embed_field_info_instance($formatter_type, $settings = array()) 
  * the field itself. All we want is the field info array in a format that lets
  * us hack hook_field_formatter_settings_form().
  */
-function entity_embed_field_info_formatter_settings($entity_type, $entity, $formatter_type, $settings, $form, $form_state) {
+function entity_embed_field_info_formatter_settings($entity, $entity_element, $formatter_type, $form, &$form_state) {
   $formatter_settings = array();
 
   $field_formatter_info = field_info_formatter_types($formatter_type);
@@ -556,23 +559,156 @@ function entity_embed_field_info_formatter_settings($entity_type, $entity, $form
   // so set $field accordingly. Unfortunately, the API is for $settings to
   // be transferred via the $instance parameter, so we must mock it.
   if (isset($field_formatter_info['module']) && ($function = ($field_formatter_info['module'] . '_field_formatter_settings_form')) && function_exists($function)) {
-    list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
+    list($id, $vid, $bundle) = entity_extract_ids($entity_element['data-entity-type'], $entity);
 
-    $field = entity_embed_field_info_field($entity_type, $field_formatter_info['module']);
+    $field = entity_embed_field_info_field($entity_element['data-entity-type'], $field_formatter_info['module']);
     $view_mode = 'default';
     $mock_instance = array(
       'display' => array(
         $view_mode => array(
           'type' => $formatter_type,
-          'settings' => $settings + field_info_formatter_settings($formatter_type),
+          'settings' => $entity_element['data-entity-embed-display-settings'] + field_info_formatter_settings($formatter_type),
         ),
       ),
-      'entity_type' => $entity_type,
+      'entity_type' => $entity_element['data-entity-type'],
       'bundle' => $bundle,
     );
 
     $formatter_settings += $function($field, $mock_instance, $view_mode, $form, $form_state);
   }
 
+  entity_embed_build_configuration_form($formatter_settings, $entity, $entity_element, $formatter_type,  $form, $form_state);
+
   return $formatter_settings;
+}
+
+/**
+ * Provides Entity Embed Display configuration for field formatters.
+ *
+ * @param $formatter_settings
+ *   The form elements for the formatter settings.
+ * @param $entity
+ *   The entity to be rendered.
+ * @param $entity_element
+ *   An associative array of properties taken from the embedded entity element.
+ * @param $formatter_type
+ *   A formatter type name.
+ * @param $form
+ *   A form array().
+ * @param $form_state
+ *   A form state array.
+ */
+function entity_embed_build_configuration_form(&$formatter_settings, $entity, $entity_element, $formatter_type, $form, &$form_state) {
+  $field_formatter_info = field_info_formatter_types($formatter_type);
+  $field = entity_embed_field_info_field($entity_element['data-entity-type'], $field_formatter_info['module']);
+
+  if ($entity_element['data-entity-type'] == 'file') {
+    if ($field['type'] == 'file') {
+      entity_embed_file_field_build_configuration_form($formatter_settings, $entity, $entity_element, $formatter_type, $form, $form_state);
+    }
+    if ($field['type'] == 'image') {
+      entity_embed_file_image_build_configuration_form($formatter_settings, $entity, $entity_element, $formatter_type, $form, $form_state);
+    }
+  }
+}
+
+/**
+ * Entity Embed Display reusing file field formatters.
+ *
+ * @param $formatter_settings
+ *   The form elements for the formatter settings.
+ * @param $entity
+ *   The entity to be rendered.
+ * @param $entity_element
+ *   An associative array of properties taken from the embedded entity element.
+ * @param $formatter_type
+ *   A formatter type name.
+ * @param $form
+ *   A form array().
+ * @param $form_state
+ *   A form state array.
+ */
+function entity_embed_file_field_build_configuration_form(&$formatter_settings, $entity, $entity_element, $formatter_type, $form, &$form_state) {
+//  // Description is stored in the configuration since it doesn't map to an
+//  // actual HTML attribute.
+//  $formatter_settings['description'] = array(
+//    '#type' => 'textfield',
+//    '#title' => t('Description'),
+//    '#default_value' => $plugin_configuration['description'],
+//    '#description' => t('The description may be used as the label of the link to the file.'),
+//  );
+}
+
+/**
+ * Entity Embed Display reusing image field formatters.
+ *
+ * @param $formatter_settings
+ *   The form elements for the formatter settings.
+ * @param $entity
+ *   The entity to be rendered.
+ * @param $entity_element
+ *   An associative array of properties taken from the embedded entity element.
+ * @param $formatter_type
+ *   A formatter type name.
+ * @param $form
+ *   A form array().
+ * @param $form_state
+ *   A form state array.
+ */
+function entity_embed_file_image_build_configuration_form(&$formatter_settings, $entity, $entity_element, $formatter_type, $form, &$form_state) {
+  // Ensure that the 'Link image to: Content' setting is not available.
+  if (isset($formatter_settings['image_link'])) {
+    unset($formatter_settings['image_link']['#options']['content']);
+  }
+
+  // The alt attribute is *required*, but we allow users to opt-in to empty
+  // alt attributes for the very rare edge cases where that is valid by
+  // specifying two double quotes as the alternative text in the dialog.
+  // However, that *is* stored as an empty alt attribute, so if we're editing
+  // an existing image (which means the src attribute is set) and its alt
+  // attribute is empty, then we show that as two double quotes in the dialog.
+  // @see https://www.drupal.org/node/2307647
+  // Alt attribute behavior is taken from the Core image dialog to ensure a
+  // consistent UX across various forms.
+  // @see editor_image_dialog_form()
+  $alt = isset($entity_element['alt']) ? $entity_element['alt'] : '';
+  if ($alt === '') {
+    // Do not change empty alt text to two double quotes if the previously
+    // used Entity Embed Display plugin was not 'image:image'. That means that
+    // some other plugin was used so if this image formatter is selected at a
+    // later stage, then this should be treated as a new edit. We show two
+    // double quotes in place of empty alt text only if that was filled
+    // intentionally by the user.
+    if (!empty($entity_element) && $entity_element['data-entity-embed-display'] == 'image:image') {
+      $alt = ENTITY_EMBED_EMPTY_STRING;
+    }
+  }
+
+  // Add support for editing the alternate and title text attributes.
+  $formatter_settings['alt'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Alternate text'),
+    '#default_value' => $alt,
+    '#description' => t('This text will be used by screen readers, search engines, or when the image cannot be loaded.'),
+    '#parents' => array('attributes', 'alt'),
+    '#required' => TRUE,
+    '#maxlength' => 512,
+  );
+  $formatter_settings['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title'),
+    '#default_value' => isset($entity_element['title']) ? $entity_element['title'] : '',
+    '#description' => t('The title is used as a tool tip when the user hovers the mouse over the image.'),
+    '#parents' => array('attributes', 'title'),
+    '#maxlength' => 1024,
+  );
+
+  if (module_exists('file_entity')) {
+    $langcode = entity_embed_get_langcode($entity_element);
+    $field_alt = file_entity_replace_alt($entity, array(), NULL, $langcode);
+    $field_title = file_entity_replace_title($entity, array(), NULL, $langcode);
+
+    $formatter_settings['alt']['#placeholder'] = $field_alt;
+    $formatter_settings['title']['#placeholder'] = $field_title;
+  }
 }

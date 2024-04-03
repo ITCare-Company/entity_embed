@@ -11,6 +11,44 @@
  */
 
 /**
+ * Alter the Entity Embed field formatters.
+ *
+ * Usually used to remove certain Entity Embed field formatters for specific
+ * entities.
+ *
+ * @param $formatters
+ *   An array of field formatters, returned from field_info_formatter_types().
+ * @param $entity_type
+ *   The type of entity, i.e. 'node', 'user'.
+ * @param $entity
+ *   The entity to be rendered. This is used to perform special
+ *   checks/processing for unruly modules. NULL if no entity is provided.
+ */
+function hook_entity_embed_field_formatters_alter(&$formatters, $entity_type, $entity) {
+  // Do nothing if no entity is provided.
+  if (!isset($entity)) {
+    return;
+  }
+
+  list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
+
+  // For video and audio files, limit the available options to the media player.
+  if ($entity_type == 'file' && in_array($bundle, array('audio', 'video'))) {
+    $formatters = array_intersect_key($formatters, array_flip(array('file:jwplayer_formatter')));
+  }
+
+  // For images, use the image formatter.
+  if ($entity_type == 'file' && in_array($bundle, array('image'))) {
+    $formatters = array_intersect_key($formatters, array_flip(array('image:image')));
+  }
+
+  // For nodes, use the default option.
+  if ($entity_type == 'node') {
+    $formatters = array_intersect_key($formatters, array_flip(array('entityreference:entityreference_entity_view')));
+  }
+}
+
+/**
  * Alter the placeholder context for an embedded entity.
  *
  * @param array &$context

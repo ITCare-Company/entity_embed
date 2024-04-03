@@ -38,7 +38,7 @@ function entity_embed_editor_ckeditor_plugins() {
       'required_html' => array(
         array(
           'tags' => array('drupal-entity'),
-          'attributes' => array('data-embed-button', 'data-entity-type', 'data-entity-uuid', 'data-entity-id', 'data-entity-embed-display', 'data-entity-embed-display-settings', 'data-align', 'data-caption'),
+          'attributes' => array('data-embed-button', 'data-entity-type', 'data-entity-uuid', 'data-entity-id', 'data-entity-embed-display', 'data-entity-embed-display-settings', 'data-langcode', 'data-align', 'data-caption', 'alt', 'title'),
         ),
       ),
       'image' => $icon,
