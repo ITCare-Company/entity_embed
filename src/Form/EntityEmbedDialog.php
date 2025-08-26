@@ -836,7 +836,7 @@ class EntityEmbedDialog extends FormBase {
 
       // Filter out empty attributes.
       $values['attributes'] = array_filter($values['attributes'], function ($value) {
-        return (bool) mb_strlen((string) $value);
+        return is_array($value) ? !empty($value) : (bool) mb_strlen((string) $value);
       });
 
       // Allow other modules to alter the values before getting submitted to the
